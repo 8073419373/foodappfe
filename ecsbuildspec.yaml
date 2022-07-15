@@ -1,0 +1,42 @@
+version: 0.2
+
+env:
+  variables:
+    AWS_REGION: us-east-1 # checkfor specific region
+    AWS_ACCOUNT_ID: 452444392358  # account id
+    IMAGE_REPO_NAME: foodappimages # image name
+    REPOSITORY_URI: 452444392358.dkr.ecr.us-east-1.amazonaws.com/foodappimages
+    IMAGE_TAG: latest
+    
+phases:
+  pre_build:
+    commands:
+        - echo Logging in to Amazon ECR...
+        - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+        - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com    
+  build:
+    commands:
+        - echo Build started on `date`
+        - echo Building the Docker image...
+        - docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG .
+        - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
+  post_build:
+    commands:
+        - echo Build completed on `date`
+        - echo Pushing the Docker image...
+        - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
+        - echo $IMAGE_REPO-NAME
+        - printf '{"ImageURI":"452444392358.dkr.ecr.us-east-1.amazonaws.com/foodappimages@sha256:450bca8602d883f025f5c83b0d0227994eb534454c7ebc96690e6a875395ce68"}' > imageDetail.json
+artifacts:
+  files: 
+    - 'image*.json'
+    - 'appspec.yaml'
+    - 'taskdef.json'
+  secondary-artifacts:
+    DefinitionArtifact:
+      files:
+        - appspec.yaml
+        - taskdef.json
+    ImageArtifact:
+      files:
+        - imageDetail.json
